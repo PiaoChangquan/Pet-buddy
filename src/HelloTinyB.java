@@ -201,6 +201,7 @@ public class HelloTinyB {
             System.exit(-1);
         }
 
+        
         System.out.println("Found the temperature characteristics");
 
         /*
