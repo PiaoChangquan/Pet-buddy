@@ -2,5 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
+	<classpathentry kind="lib" path="C:/Users/Park/Dropbox/研究所研究内容/气象厅 agent/lib/jackson-annotations-2.4.4.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Park/Dropbox/研究所研究内容/气象厅 agent/lib/jackson-core-2.4.4.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Park/Dropbox/研究所研究内容/气象厅 agent/lib/jackson-databind-2.4.4.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

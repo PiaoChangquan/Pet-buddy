@@ -3,9 +3,14 @@ import tinyb.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class HelloTinyB {
     private static final float SCALE_LSB = 0.03125f;
@@ -30,8 +35,12 @@ public class HelloTinyB {
     static float Magconvert(int raw) {
         return raw * 1f;
     }
+    static float Lightconvert(int raw) {
+        int m = raw & 0x0FFF;
+        int e = (raw & 0xF000)>>12;
+    	return (float) (m * ( 0.01 * Math.pow (2.0 , e)));
+    }
   
-	
     /*
      * After discovery is started, new devices will be detected. We can get a list of all devices through the manager's
      * getDevices method. We can the look through the list of devices to find the device with the MAC which we provided
@@ -78,7 +87,7 @@ public class HelloTinyB {
                 return null;
 
             for (BluetoothGattService service : bluetoothServices) {
-                System.out.println("UUID: " + service.getUuid());
+//                System.out.println("UUID: " + service.getUuid());
                 if (service.getUuid().equals(UUID))
                     tempService = service;
             }
@@ -108,7 +117,7 @@ public class HelloTinyB {
      * The API used in this example is based on TinyB v0.3, which only supports polling, but v0.4 will introduce a
      * simplied API for discovering devices and services.
      */
-    public static void main(String[] args) throws InterruptedException, FileNotFoundException {
+    public static void main(String[] args) throws InterruptedException, IOException {
 
         if (args.length < 1) {
             System.err.println("Run with <device_address> argument");
@@ -116,8 +125,13 @@ public class HelloTinyB {
         }
         String path="/home/root/tinyb-master/tinyb-master/examples/java/SensorTagData.txt";
         File f = new File(path);
-//        File f = new File(File.separator+"SensorTagData.txt");
-        PrintWriter out = new PrintWriter(new FileOutputStream(f, true));
+        PrintWriter outToFile = new PrintWriter(new FileOutputStream(f, true));
+        
+        
+        Socket socket = new Socket("117.16.146.58", 55555);
+		PrintStream outToServer = new PrintStream(socket.getOutputStream());
+        
+        
         /*
          * To start looking of the device, we first must initialize the TinyB library. The way of interacting with the
          * library is through the BluetoothManager. There can be only one BluetoothManager at one time, and the
@@ -166,18 +180,20 @@ public class HelloTinyB {
         BluetoothGattService tempService = getService(sensor, "f000aa00-0451-4000-b000-000000000000");
         BluetoothGattService HumidityService = getService(sensor, "f000aa20-0451-4000-b000-000000000000");
         BluetoothGattService MovementService = getService(sensor, "f000aa80-0451-4000-b000-000000000000");
+        BluetoothGattService PressureService = getService(sensor, "f000aa40-0451-4000-b000-000000000000");
+        BluetoothGattService OpticalService = getService(sensor, "f000aa70-0451-4000-b000-000000000000");
 
-//        if (tempService == null) {
-//            System.err.println("This device does not have the temperature service we are looking for.");
-//            sensor.disconnect();
-//            System.exit(-1);
-//        }
-//        if (HumidityService == null) {
-//            System.err.println("This device does not have the Humidity service we are looking for.");
-//            sensor.disconnect();
-//            System.exit(-1);
-//        }
-//        System.out.println("Found service " + tempService.getUuid());
+        if (tempService == null) {
+            System.err.println("This device does not have the temperature service we are looking for.");
+            sensor.disconnect();
+            System.exit(-1);
+        }
+        if (HumidityService == null) {
+            System.err.println("This device does not have the Humidity service we are looking for.");
+            sensor.disconnect();
+            System.exit(-1);
+        }
+        System.out.println("Found service " + tempService.getUuid());
 
         BluetoothGattCharacteristic tempValue = getCharacteristic(tempService, "f000aa01-0451-4000-b000-000000000000");
         BluetoothGattCharacteristic tempConfig = getCharacteristic(tempService, "f000aa02-0451-4000-b000-000000000000");
@@ -187,14 +203,24 @@ public class HelloTinyB {
         BluetoothGattCharacteristic HumidityConfig = getCharacteristic(HumidityService, "f000aa22-0451-4000-b000-000000000000");
         BluetoothGattCharacteristic HumidityPeriod = getCharacteristic(HumidityService, "f000aa23-0451-4000-b000-000000000000");
         
-     
         BluetoothGattCharacteristic MovementValue = getCharacteristic(MovementService, "f000aa81-0451-4000-b000-000000000000");
         BluetoothGattCharacteristic MovementConfig = getCharacteristic(MovementService, "f000aa82-0451-4000-b000-000000000000");
         BluetoothGattCharacteristic MovementPeriod = getCharacteristic(MovementService, "f000aa83-0451-4000-b000-000000000000");
+        
+        BluetoothGattCharacteristic PressureValue = getCharacteristic(PressureService, "f000aa41-0451-4000-b000-000000000000");
+        BluetoothGattCharacteristic PressureConfig = getCharacteristic(PressureService, "f000aa42-0451-4000-b000-000000000000");
+        BluetoothGattCharacteristic PressurePeriod = getCharacteristic(PressureService, "f000aa44-0451-4000-b000-000000000000");
+        
+        BluetoothGattCharacteristic OpticalValue = getCharacteristic(OpticalService, "f000aa71-0451-4000-b000-000000000000");
+        BluetoothGattCharacteristic OpticalConfig = getCharacteristic(OpticalService, "f000aa72-0451-4000-b000-000000000000");
+        BluetoothGattCharacteristic OpticalPeriod = getCharacteristic(OpticalService, "f000aa73-0451-4000-b000-000000000000");
 
+     
         if (tempValue == null || tempConfig == null || tempPeriod == null ||
         		HumidityValue == null || HumidityConfig == null || HumidityPeriod == null||
-        		MovementValue == null || MovementConfig == null || MovementPeriod == null)
+        		MovementValue == null || MovementConfig == null || MovementPeriod == null||
+        		PressureValue == null || PressureConfig == null || PressurePeriod == null||
+        		OpticalValue == null || OpticalConfig == null || OpticalPeriod == null)
              {
             System.err.println("Could not find the correct characteristics.");
             sensor.disconnect();
@@ -213,6 +239,8 @@ public class HelloTinyB {
         byte[] Mconfig = { 0x7f , 0x00};
         tempConfig.writeValue(config);
         HumidityConfig.writeValue(config);
+        PressureConfig.writeValue(config);
+        OpticalConfig.writeValue(config);
         MovementConfig.writeValue(Mconfig);
         /*
          * Each second read the value characteristic and display it in a human readable format.
@@ -221,22 +249,42 @@ public class HelloTinyB {
             byte[] tempRaw = tempValue.readValue();
             byte[] HumidityRaw = HumidityValue.readValue();
             byte[] MovementRaw = MovementValue.readValue();
+            byte[] PressureRaw = PressureValue.readValue();
+            byte[] OpticalRaw = OpticalValue.readValue();
             
-            
+            List<SensorData> SensorList  = new ArrayList<SensorData>();
+            ObjectMapper mapper = new ObjectMapper();
+            Date day=new Date();
+			SimpleDateFormat time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+            System.out.println("==================="+time.format(day)+"======================");
             System.out.print("Temp raw = {");
             for (byte b : tempRaw) {
                 System.out.print(String.format("%02x,", b));
             }
             System.out.println("}");
             System.out.print("Humidity raw = {");
-            for (byte g : HumidityRaw) {
-                System.out.print(String.format("%02x,", g));
+            for (byte b : HumidityRaw) {
+                System.out.print(String.format("%02x,", b));
             }
             System.out.println("}");
 
             System.out.print("Movement raw = {");
-            for (byte g2 : MovementRaw) {
-                System.out.print(String.format("%02x,", g2));
+            for (byte b : MovementRaw) {
+                System.out.print(String.format("%02x,", b));
+            }
+            System.out.println("}");
+            
+            System.out.print("Pressure raw = {");
+            for (byte b : PressureRaw) {
+                System.out.print(String.format("%02x,", b));
+            }
+            System.out.println("}");  
+            
+            
+            System.out.print("Optical raw = {");
+            for (byte b : OpticalRaw) {
+                System.out.print(String.format("%02x,", b));
             }
             System.out.println("}");
           
@@ -264,6 +312,11 @@ public class HelloTinyB {
             int MagYRaw = (MovementRaw[14] & 0xff) | (MovementRaw[15] << 8);
             int MagZRaw = (MovementRaw[16] & 0xff) | (MovementRaw[17] << 8);
             
+            int PresTempRaw =( PressureRaw[0] & 0xff) | (PressureRaw[1] << 8) | (PressureRaw[2] << 16 );
+            int PresRaw = (PressureRaw[3] & 0xff) | (PressureRaw[4] << 8 )| (PressureRaw[5] << 16 );
+            
+            int LightRaw =( OpticalRaw[0] & 0xff) | (OpticalRaw[1] << 8 );
+            
             float objectTempCelsius = convertCelsius(objectTempRaw);
             float ambientTempCelsius = convertCelsius(ambientTempRaw);
             float TempRawCelsius = TempRaw/65536f*165-40;
@@ -281,34 +334,75 @@ public class HelloTinyB {
             float MagY = Magconvert(MagYRaw); 
             float MagZ = Magconvert(MagZRaw);
             
-            Date day=new Date();
-			SimpleDateFormat time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            float PresTempValue = PresTempRaw / 100.0f;
+            float PresValue = PresRaw / 100.0f;
+            
+            float LightValue = Lightconvert(LightRaw); 
             
             System.out.println(
                     String.format(" Temp: Object = %fC, Ambient = %fC", objectTempCelsius, ambientTempCelsius));
             System.out.println(
-            		String.format(" Temp: Object = %fC, Humi = %f", TempRawCelsius, HumiRawCelsius)+"%");
+            		String.format(" Humidity: Ambient = %fC, Humi = %f", TempRawCelsius, HumiRawCelsius)+"%");
          
-            System.out.println(String.format(" Gyroscop: x = %f'/s, y = %f'/s , x = %f'/s", GyroX, GyroY, GyroZ));
-            System.out.println(String.format(" Accelerometer: x = %fG, y = %fG , x = %fG", AccX, AccY, AccZ));
-            System.out.println(String.format(" Magnetometer: x = %fuT, y = %fuT , x = %fuT", MagX, MagY, MagZ));
+            System.out.println(String.format(" Gyroscop: x = %f'/s, y = %f'/s , z = %f'/s", GyroX, GyroY, GyroZ));
+            System.out.println(String.format(" Accelerometer: x = %fG, y = %fG , z = %fG", AccX, AccY, AccZ));
+            System.out.println(String.format(" Magnetometer: x = %fuT, y = %fuT , z = %fuT", MagX, MagY, MagZ));
+            System.out.println(String.format(" Pressure: Ambient = %fC, Pressure = %fhPa", PresTempValue, PresValue));
+            System.out.println(String.format(" Light: Light = %fLux", LightValue));
             
-            out.println("==================="+time.format(day)+"======================");
-            out.println(
-                    String.format(" Temp: Object = %fC, Ambient = %fC", objectTempCelsius, ambientTempCelsius));
-            out.println(String.format(" Temp: Object = %fC, Humi = %f", TempRawCelsius, HumiRawCelsius)+"%");
+            outToFile.println("==================="+time.format(day)+"======================");
+            outToFile.println(String.format(" Temp: Object = %fC, Ambient = %fC", objectTempCelsius, ambientTempCelsius));
+            outToFile.println(String.format(" Temp: Object = %fC, Humi = %f", TempRawCelsius, HumiRawCelsius)+"%");
             
-            out.println(String.format(" Gyroscop: x = %f'/s, y = %f'/s , x = %f'/s", GyroX, GyroY, GyroZ));
+            outToFile.println(String.format(" Gyroscop: x = %f'/s, y = %f'/s , z = %f'/s", GyroX, GyroY, GyroZ));
             
-            out.println(String.format(" Accelerometer: x = %fG, y = %fG , x = %fG", AccX, AccY, AccZ));
+            outToFile.println(String.format(" Accelerometer: x = %fG, y = %fG , z = %fG", AccX, AccY, AccZ));
             
-            out.println(String.format(" Magnetometer: x = %fuT, y = %fuT , x = %fuT", MagX, MagY, MagZ));
+            outToFile.println(String.format(" Magnetometer: x = %fuT, y = %fuT , z = %fuT", MagX, MagY, MagZ));
+            outToFile.println(String.format(" Pressure: Ambient = %fC, Pressure = %fhPa", PresTempValue, PresValue));
+            outToFile.println(String.format(" Light: Light = %fLux", LightValue));
             
+            SensorData TempSensor1 = new SensorData("f000aa00-0451-b001",time.format(day),String.valueOf(objectTempCelsius));
+            SensorData TempSensor2 = new SensorData("f000aa00-0451-b002",time.format(day),String.valueOf(ambientTempCelsius));
             
+            SensorData HumiditySensor1 = new SensorData("f000aa20-0451-b001",time.format(day),String.valueOf(TempRawCelsius));
+            SensorData HumiditySensor2 = new SensorData("f000aa20-0451-b002",time.format(day),String.valueOf(HumiRawCelsius));
+            
+            SensorData MovementSensor1 = new SensorData("f000aa80-0451-b001",time.format(day),GyroX+":"+GyroY+":"+GyroZ);
+            SensorData MovementSensor2 = new SensorData("f000aa80-0451-b002",time.format(day),AccX+":"+AccY+":"+AccZ);
+            SensorData MovementSensor3 = new SensorData("f000aa80-0451-b003",time.format(day),MagX+":"+MagY+":"+MagZ);
+           
+            SensorData PressureSensor1 = new SensorData("f000aa40-0451-b001",time.format(day),String.valueOf(PresTempValue));
+            SensorData PressureSensor2 = new SensorData("f000aa40-0451-b002",time.format(day),String.valueOf(PresValue));
+            
+            SensorData OpticalSensor = new SensorData("f000aa70-0451-b001",time.format(day),String.valueOf(LightValue));
+           
+            SensorList.add(TempSensor1);	
+            SensorList.add(TempSensor2);	
+            
+            SensorList.add(HumiditySensor1);	
+            SensorList.add(HumiditySensor2);	
+            
+            SensorList.add(MovementSensor1);	
+            SensorList.add(MovementSensor2);	
+            SensorList.add(MovementSensor3);
+            
+            SensorList.add(PressureSensor1);	
+            SensorList.add(PressureSensor2);
+            
+            SensorList.add(OpticalSensor);
+            
+            String jsonInString = mapper.writeValueAsString(SensorList);
+			
+            outToServer.print(jsonInString);
+			outToServer.flush();
+			System.out.println(jsonInString);
+			socket.close();
+			
             Thread.sleep(1000);
         }
         sensor.disconnect();
-        out.close();
+        outToFile.close();
 
     }
 }
