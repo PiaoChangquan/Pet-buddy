@@ -1,7 +1,6 @@
 import tinyb.*;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -13,7 +12,7 @@ import java.util.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class HelloTinyB {
-    private static final float SCALE_LSB = 0.03125f;
+//    private static final float SCALE_LSB = 0.03125f;
     static boolean running = true;
 
     static void printDevice(BluetoothDevice device) {
@@ -87,7 +86,7 @@ public class HelloTinyB {
                 return null;
 
             for (BluetoothGattService service : bluetoothServices) {
-//                System.out.println("UUID: " + service.getUuid());
+                System.out.println("UUID: " + service.getUuid());
                 if (service.getUuid().equals(UUID))
                     tempService = service;
             }
@@ -128,10 +127,7 @@ public class HelloTinyB {
         PrintWriter outToFile = new PrintWriter(new FileOutputStream(f, true));
         
         
-        Socket socket = new Socket("117.16.146.58", 55555);
-		PrintStream outToServer = new PrintStream(socket.getOutputStream());
-        
-        
+       
         /*
          * To start looking of the device, we first must initialize the TinyB library. The way of interacting with the
          * library is through the BluetoothManager. There can be only one BluetoothManager at one time, and the
@@ -167,12 +163,13 @@ public class HelloTinyB {
             System.out.println("Could not connect device.");
             System.exit(-1);
         }
-
+        
         final Thread mainThread = Thread.currentThread();
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 running = false;
                 sensor.disconnect();
+              
             }
         });
 
@@ -193,7 +190,7 @@ public class HelloTinyB {
             sensor.disconnect();
             System.exit(-1);
         }
-        System.out.println("Found service " + tempService.getUuid());
+//        System.out.println("Found service " + tempService.getUuid());
 
         BluetoothGattCharacteristic tempValue = getCharacteristic(tempService, "f000aa01-0451-4000-b000-000000000000");
         BluetoothGattCharacteristic tempConfig = getCharacteristic(tempService, "f000aa02-0451-4000-b000-000000000000");
@@ -241,11 +238,17 @@ public class HelloTinyB {
         HumidityConfig.writeValue(config);
         PressureConfig.writeValue(config);
         OpticalConfig.writeValue(config);
+        
         MovementConfig.writeValue(Mconfig);
         /*
          * Each second read the value characteristic and display it in a human readable format.
          */
+        
+        
         while (running) {
+        	Socket socket = new Socket("117.16.146.58", 55555);
+            
+        	PrintStream outToServer = new PrintStream(socket.getOutputStream());
             byte[] tempRaw = tempValue.readValue();
             byte[] HumidityRaw = HumidityValue.readValue();
             byte[] MovementRaw = MovementValue.readValue();
@@ -396,13 +399,18 @@ public class HelloTinyB {
 			
             outToServer.print(jsonInString);
 			outToServer.flush();
-			System.out.println(jsonInString);
-			socket.close();
+            outToServer.close();
+  		  
+//			System.out.println(jsonInString);
+		
 			
-            Thread.sleep(1000);
+            socket.close();
+            Thread.sleep(500);
         }
         sensor.disconnect();
         outToFile.close();
-
+        
     }
+
+   
 }
