@@ -65,7 +65,7 @@ public class HelloTinyB {
             if (sensor != null) {
                 return sensor;
             }
-            Thread.sleep(4000);
+            Thread.sleep(1000);
         }
         return null;
     }
@@ -77,7 +77,7 @@ public class HelloTinyB {
      * short UUID AA00 which we insert into the TI Base UUID: f000XXXX-0451-4000-b000-000000000000
      */
     static BluetoothGattService getService(BluetoothDevice device, String UUID) throws InterruptedException {
-        System.out.println("Services exposed by device:");
+//        System.out.println("Services exposed by device:");
         BluetoothGattService tempService = null;
         List<BluetoothGattService> bluetoothServices = null;
         do {
@@ -86,11 +86,11 @@ public class HelloTinyB {
                 return null;
 
             for (BluetoothGattService service : bluetoothServices) {
-                System.out.println("UUID: " + service.getUuid());
+//                System.out.println("UUID: " + service.getUuid());
                 if (service.getUuid().equals(UUID))
                     tempService = service;
             }
-            Thread.sleep(4000);
+            Thread.sleep(100);
         } while (bluetoothServices.isEmpty() && running);
         return tempService;
     }
@@ -133,12 +133,14 @@ public class HelloTinyB {
          * library is through the BluetoothManager. There can be only one BluetoothManager at one time, and the
          * reference to it is obtained through the getBluetoothManager method.
          */
+        
         BluetoothManager manager = BluetoothManager.getBluetoothManager();
 
         /*
          * The manager will try to initialize a BluetoothAdapter if any adapter is present in the system. To initialize
          * discovery we can call startDiscovery, which will put the default adapter in discovery mode.
          */
+        
         boolean discoveryStarted = manager.startDiscovery();
 
         System.out.println("The discovery started: " + (discoveryStarted ? "true" : "false"));
@@ -172,8 +174,7 @@ public class HelloTinyB {
               
             }
         });
-
-
+        
         BluetoothGattService tempService = getService(sensor, "f000aa00-0451-4000-b000-000000000000");
         BluetoothGattService HumidityService = getService(sensor, "f000aa20-0451-4000-b000-000000000000");
         BluetoothGattService MovementService = getService(sensor, "f000aa80-0451-4000-b000-000000000000");
@@ -225,30 +226,30 @@ public class HelloTinyB {
         }
 
         
-        System.out.println("Found the temperature characteristics");
-
+//        System.out.println("Found the Sensors characteristics");
         /*
          * Turn on the Temperature Service by writing 1 in the configuration characteristic, as mentioned in the PDF
          * mentioned above. We could also modify the update interval, by writing in the period characteristic, but the
          * default 1s is good enough for our purposes.
          */
+        System.out.println("Config Sensors");
         byte[] config = { 0x01 };
         byte[] Mconfig = { 0x7f , 0x00};
         tempConfig.writeValue(config);
         HumidityConfig.writeValue(config);
         PressureConfig.writeValue(config);
-        OpticalConfig.writeValue(config);
-        
+        OpticalConfig.writeValue(config);        
         MovementConfig.writeValue(Mconfig);
+        System.out.println("Config Sensors done");
         /*
          * Each second read the value characteristic and display it in a human readable format.
          */
         
         
         while (running) {
-        	Socket socket = new Socket("117.16.146.58", 55555);
-            
+        	Socket socket = new Socket("117.16.146.58", 55555);   
         	PrintStream outToServer = new PrintStream(socket.getOutputStream());
+        	
             byte[] tempRaw = tempValue.readValue();
             byte[] HumidityRaw = HumidityValue.readValue();
             byte[] MovementRaw = MovementValue.readValue();
@@ -283,8 +284,7 @@ public class HelloTinyB {
                 System.out.print(String.format("%02x,", b));
             }
             System.out.println("}");  
-            
-            
+                        
             System.out.print("Optical raw = {");
             for (byte b : OpticalRaw) {
                 System.out.print(String.format("%02x,", b));
@@ -342,11 +342,8 @@ public class HelloTinyB {
             
             float LightValue = Lightconvert(LightRaw); 
             
-            System.out.println(
-                    String.format(" Temp: Object = %fC, Ambient = %fC", objectTempCelsius, ambientTempCelsius));
-            System.out.println(
-            		String.format(" Humidity: Ambient = %fC, Humi = %f", TempRawCelsius, HumiRawCelsius)+"%");
-         
+            System.out.println( String.format(" Temp: Object = %fC, Ambient = %fC", objectTempCelsius, ambientTempCelsius));
+            System.out.println(String.format(" Humidity: Ambient = %fC, Humi = %f", TempRawCelsius, HumiRawCelsius)+"%");
             System.out.println(String.format(" Gyroscop: x = %f'/s, y = %f'/s , z = %f'/s", GyroX, GyroY, GyroZ));
             System.out.println(String.format(" Accelerometer: x = %fG, y = %fG , z = %fG", AccX, AccY, AccZ));
             System.out.println(String.format(" Magnetometer: x = %fuT, y = %fuT , z = %fuT", MagX, MagY, MagZ));
@@ -356,11 +353,8 @@ public class HelloTinyB {
             outToFile.println("==================="+time.format(day)+"======================");
             outToFile.println(String.format(" Temp: Object = %fC, Ambient = %fC", objectTempCelsius, ambientTempCelsius));
             outToFile.println(String.format(" Temp: Object = %fC, Humi = %f", TempRawCelsius, HumiRawCelsius)+"%");
-            
-            outToFile.println(String.format(" Gyroscop: x = %f'/s, y = %f'/s , z = %f'/s", GyroX, GyroY, GyroZ));
-            
-            outToFile.println(String.format(" Accelerometer: x = %fG, y = %fG , z = %fG", AccX, AccY, AccZ));
-            
+            outToFile.println(String.format(" Gyroscop: x = %f'/s, y = %f'/s , z = %f'/s", GyroX, GyroY, GyroZ));            
+            outToFile.println(String.format(" Accelerometer: x = %fG, y = %fG , z = %fG", AccX, AccY, AccZ));            
             outToFile.println(String.format(" Magnetometer: x = %fuT, y = %fuT , z = %fuT", MagX, MagY, MagZ));
             outToFile.println(String.format(" Pressure: Ambient = %fC, Pressure = %fhPa", PresTempValue, PresValue));
             outToFile.println(String.format(" Light: Light = %fLux", LightValue));
@@ -400,10 +394,7 @@ public class HelloTinyB {
             outToServer.print(jsonInString);
 			outToServer.flush();
             outToServer.close();
-  		  
-//			System.out.println(jsonInString);
-		
-			
+					
             socket.close();
             Thread.sleep(500);
         }
